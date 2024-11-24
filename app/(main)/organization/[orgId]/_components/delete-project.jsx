@@ -1,46 +1,44 @@
-"use client"
+"use client";
 
-import React from 'react'
-import { useOrganization } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { useOrganization } from "@clerk/nextjs";
 import { deleteProject } from "@/actions/projects";
-
+import { useRouter } from "next/navigation";
 import useFetch from "@/hooks/use-fetch";
 
-function DeleteProject({projectId}) {
-    const { membership } = useOrganization();
-    const isAdmin = membership?.role === "org:admin";
-    if (!isAdmin) return null;
+export default function DeleteProject({ projectId }) {
+  const { membership } = useOrganization();
+  const router = useRouter();
 
+  const {
+    loading: isDeleting,
+    error,
+    fn: deleteProjectFn,
+    data: deleted,
+  } = useFetch(deleteProject);
 
-    const router = useRouter();
+  const isAdmin = membership?.role === "org:admin";
 
+  const handleDelete = async () => {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      deleteProjectFn(projectId);
+    }
+  };
 
-    const {
-        loading: isDeleting,
-        error,
-        fn: deleteProjectFn,
-        data: deleted,
-      } = useFetch(deleteProject);
+  useEffect(() => {
+    if (deleted) {
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deleted]);
 
-      const handleDelete = async () => {
-        if (window.confirm("Are you sure you want to delete this project?")) {
-          deleteProjectFn(projectId);
-        }
-      };
+  if (!isAdmin) return null;
 
-      useEffect(() => {
-        if (deleted) {
-          router.refresh();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [deleted]);
   return (
     <>
-     <Button
+      <Button
         variant="ghost"
         size="sm"
         className={`${isDeleting ? "animate-pulse" : ""}`}
@@ -50,8 +48,6 @@ function DeleteProject({projectId}) {
         <Trash2 className="h-4 w-4" />
       </Button>
       {error && <p className="text-red-500 text-sm">{error.message}</p>}
-      </>
-  )
+    </>
+  );
 }
-
-export default DeleteProject
