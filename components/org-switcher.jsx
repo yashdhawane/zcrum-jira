@@ -14,10 +14,10 @@ import {
 function OrgSwitcher() {
     const { isLoaded } = useOrganization();
     const { isLoaded: isUserLoaded } = useUser();
+    const pathname = usePathname();
     if (!isLoaded || !isUserLoaded) {
         return null;
       }
-    const pathname = usePathname();
   return (
     
            <div className="flex justify-end mt-1">

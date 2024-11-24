@@ -3,14 +3,14 @@ import { OrganizationList, useOrganization } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react'
 
-function page() {
+function Onboarding() {
   const {organization}=useOrganization();
   const router=useRouter();
   useEffect(()=>{
     if(organization){
       router.push(`/organization/${organization.slug}`)
     }
-  },[organization])
+  },[organization,router])
   return (
     <div className="flex justify-center items-center pt-14">
         <OrganizationList  
@@ -21,4 +21,4 @@ function page() {
   )
 }
 
-export default page
+export default Onboarding

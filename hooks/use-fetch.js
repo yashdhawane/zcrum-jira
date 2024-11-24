@@ -1,9 +1,10 @@
-import { useState ,useCallback} from "react";
+import { useState ,useCallback,useRef} from "react";
 import { toast } from "sonner";
 
 const useFetch = (cb) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(null);
+  
+  const [data, setData] = useState();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fn = useCallback(async (...args) => {
@@ -12,6 +13,7 @@ const useFetch = (cb) => {
 
     try {
       const response = await cb(...args);
+      // const response = await cbRef.current(...args);
       setData(response);
       setError(null);
     } catch (error) {
@@ -20,7 +22,7 @@ const useFetch = (cb) => {
     } finally {
       setLoading(false);
     }
-  },[cb]);
+  },[]);
 
   return { data, loading, error, fn, setData };
 };

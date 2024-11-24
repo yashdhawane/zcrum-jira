@@ -46,7 +46,7 @@ function CreatePoject() {
 
     useEffect(() => {
       if (project) router.push(`/projects/${project.id}`);
-    }, [loading]);
+    }, [loading,project,error,router]);
 
     useEffect(() => {
         if (isOrgLoaded && isUserLoaded && membership) {
@@ -55,7 +55,7 @@ function CreatePoject() {
       }, [isOrgLoaded, isUserLoaded, membership]);
 
       if (!isOrgLoaded || !isUserLoaded) {
-        return null;
+        return <div>Loading...</div>;
       }
 
       if (!isAdmin) {
