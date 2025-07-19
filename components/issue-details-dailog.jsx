@@ -115,8 +115,22 @@ export default function IssueDetailsDialog({
         )}
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
-            <Select value={status} onValueChange={handleStatusChange}>
+            <Select value={status} disabled={!canChange} onValueChange={handleStatusChange}>
+            {/* <Select
+                value={priority}
+                onValueChange={handlePriorityChange}
+                disabled={!canChange}
+            > */}
+            
               <SelectTrigger className="">
+              {/* <SelectTrigger
+                  className={`border ${borderCol} rounded`}
+                  title={
+                    user.id !== issue.assignee.clerkUserId
+                      ? "Only the assignee can change the status"
+                      : ""
+                  }
+              > */}
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -127,6 +141,27 @@ export default function IssueDetailsDialog({
                 ))}
               </SelectContent>
             </Select>
+{/* hide */}
+{/* {user.id === issue.assignee.clerkUserId ? (
+  <Select value={status} onValueChange={handleStatusChange}>
+    <SelectTrigger className={`border ${borderCol} rounded`}>
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      {Object.values(STATUS).map((status) => (
+        <SelectItem key={status} value={status}>
+          {status}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+) : (
+  <div className="text-muted-foreground border px-3 py-2 rounded bg-muted">
+    {status}
+  </div>
+)} */}
+
+
             <Select
               value={priority}
               onValueChange={handlePriorityChange}

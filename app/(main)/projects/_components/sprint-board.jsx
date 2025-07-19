@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BarLoader } from "react-spinners";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import useFetch from "@/hooks/use-fetch";
-
+import { useUser } from "@clerk/nextjs";
 import statuses from "@/data/status";
 import { getIssuesForSprint, updateIssueOrder } from "@/actions/issues";
 
@@ -16,15 +16,17 @@ import IssueCreationDrawer from "./create-issue";
 import IssueCard from "@/components/issue-card";
 import BoardFilters from "./board-filters";
 
-function reorder(list, startIndex, endIndex) {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
+// function reorder(list, startIndex, endIndex) {
+//   const result = Array.from(list);
+//   const [removed] = result.splice(startIndex, 1);
+//   result.splice(endIndex, 0, removed);
 
-  return result;
-}
+//   return result;
+// }
 
 export default function SprintBoard({ sprints, projectId, orgId }) {
+  const { user } = useUser();
+  const currentUserClerkId = user?.id;  
   const [currentSprint, setCurrentSprint] = useState(
     sprints.find((spr) => spr.status === "ACTIVE") || sprints[0]
   );
@@ -42,16 +44,24 @@ export default function SprintBoard({ sprints, projectId, orgId }) {
 
   const [filteredIssues, setFilteredIssues] = useState(issues);
 
+  useEffect(() => {
+    if (currentSprint.id) fetchIssues(currentSprint.id);
+  }, [currentSprint.id, fetchIssues]);
+
+  useEffect(() => {
+    setFilteredIssues(issues);
+  }, [issues]);
+
   const handleFilterChange = (newFilteredIssues) => {
     setFilteredIssues(newFilteredIssues);
   };
 
-  useEffect(() => {
-    if (currentSprint.id) {
-      fetchIssues(currentSprint.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSprint.id]);
+  // useEffect(() => {
+  //   if (currentSprint.id) {
+  //     fetchIssues(currentSprint.id);
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [currentSprint.id]);
 
   const handleAddIssue = (status) => {
     setSelectedStatus(status);
@@ -77,65 +87,105 @@ export default function SprintBoard({ sprints, projectId, orgId }) {
       toast.warning("Cannot update board after sprint end");
       return;
     }
-    const { destination, source } = result;
 
-    if (!destination) {
+    // const { destination, source } = result;
+     const { destination, source, draggableId } = result;
+    if (!destination ||
+        (destination.droppableId === source.droppableId &&
+         destination.index === source.index)
+    ) return;
+
+    // if (!destination) {
+    //   return;
+    // }
+
+    // if (
+    //   destination.droppableId === source.droppableId &&
+    //   destination.index === source.index
+    // ) {
+    //   return;
+    // }
+    const issueToMove = issues.find(i => i.id === draggableId);
+    const isAssignee  = issueToMove.assignee?.clerkUserId === currentUserClerkId;
+    if (!isAssignee) {
+      toast.error("You don't have permission to move this issue");
       return;
     }
 
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
+  //    const isOwner = issue.assigneeId === currentUser?.id;
+  //    if (!isOwner) {
+  //   toast.error("You can't move this issue because it's not assigned to you.");
+  //   return; // ❌ Stop here
+  // }
 
-    const newOrderedData = [...issues];
+    // const newOrderedData = [...issues];
 
     // source and destination list
-    const sourceList = newOrderedData.filter(
-      (list) => list.status === source.droppableId
-    );
+  //   const sourceList = newOrderedData.filter(
+  //     (list) => list.status === source.droppableId
+  //   );
 
-    const destinationList = newOrderedData.filter(
-      (list) => list.status === destination.droppableId
-    );
+  //   const destinationList = newOrderedData.filter(
+  //     (list) => list.status === destination.droppableId
+  //   );
+
+  //   if (source.droppableId === destination.droppableId) {
+  //     const reorderedCards = reorder(
+  //       sourceList,
+  //       source.index,
+  //       destination.index
+  //     );
+
+  //     reorderedCards.forEach((card, i) => {
+  //       card.order = i;
+  //     });
+  //   } else {
+  //     // remove card from the source list
+  //     const [movedCard] = sourceList.splice(source.index, 1);
+
+  //     // assign the new list id to the moved card
+  //     movedCard.status = destination.droppableId;
+
+  //     // add new card to the destination list
+  //     destinationList.splice(destination.index, 0, movedCard);
+
+  //     sourceList.forEach((card, i) => {
+  //       card.order = i;
+  //     });
+
+  //     // update the order for each card in destination list
+  //     destinationList.forEach((card, i) => {
+  //       card.order = i;
+  //     });
+  //   }
+
+  //   const sortedIssues = newOrderedData.sort((a, b) => a.order - b.order);
+  //   setIssues(newOrderedData, sortedIssues);
+
+  //   updateIssueOrderFn(sortedIssues);
+  // };
+// Reorder logic
+    const newData = [...issues];
+    const srcList = newData.filter(i => i.status === source.droppableId);
+    const dstList = newData.filter(i => i.status === destination.droppableId);
 
     if (source.droppableId === destination.droppableId) {
-      const reorderedCards = reorder(
-        sourceList,
-        source.index,
-        destination.index
-      );
-
-      reorderedCards.forEach((card, i) => {
-        card.order = i;
-      });
+      const [removed] = srcList.splice(source.index, 1);
+      srcList.splice(destination.index, 0, removed);
+      srcList.forEach((c, idx) => c.order = idx);
     } else {
-      // remove card from the source list
-      const [movedCard] = sourceList.splice(source.index, 1);
-
-      // assign the new list id to the moved card
-      movedCard.status = destination.droppableId;
-
-      // add new card to the destination list
-      destinationList.splice(destination.index, 0, movedCard);
-
-      sourceList.forEach((card, i) => {
-        card.order = i;
-      });
-
-      // update the order for each card in destination list
-      destinationList.forEach((card, i) => {
-        card.order = i;
-      });
+      const [moved] = srcList.splice(source.index, 1);
+      moved.status = destination.droppableId;
+      dstList.splice(destination.index, 0, moved);
+      srcList.forEach((c, idx) => c.order = idx);
+      dstList.forEach((c, idx) => c.order = idx);
     }
 
-    const sortedIssues = newOrderedData.sort((a, b) => a.order - b.order);
-    setIssues(newOrderedData, sortedIssues);
-
-    updateIssueOrderFn(sortedIssues);
+    const sorted = newData.sort((a, b) => a.order - b.order);
+    setIssues(newData, sorted);
+    updateIssueOrderFn(sorted);
   };
+
 
   if (issuesError) return <div>Error loading issues</div>;
 
@@ -155,11 +205,12 @@ export default function SprintBoard({ sprints, projectId, orgId }) {
       {updateIssuesError && (
         <p className="text-red-500 mt-2">{updateIssuesError.message}</p>
       )}
+
       {(updateIssuesLoading || issuesLoading) && (
         <BarLoader className="mt-4" width={"100%"} color="#36d7b7" />
       )}
 
-      <DragDropContext onDragEnd={onDragEnd}>
+      {/* <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 bg-slate-900 p-4 rounded-lg">
           {statuses.map((column) => (
             <Droppable key={column.key} droppableId={column.key}>
@@ -175,6 +226,7 @@ export default function SprintBoard({ sprints, projectId, orgId }) {
                   {filteredIssues
                     ?.filter((issue) => issue.status === column.key)
                     .map((issue, index) => (
+                      
                       <Draggable
                         key={issue.id}
                         draggableId={issue.id}
@@ -215,6 +267,71 @@ export default function SprintBoard({ sprints, projectId, orgId }) {
                         Create Issue
                       </Button>
                     )}
+                </div>
+              )}
+            </Droppable>
+          ))}
+        </div>
+      </DragDropContext> */}
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 bg-slate-900 p-4 rounded-lg">
+          {statuses.map(col => (
+            <Droppable key={col.key} droppableId={col.key}>
+              {provided => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-2"
+                >
+                  <h3 className="font-semibold mb-2 text-center">
+                    {col.name}
+                  </h3>
+
+                  {(filteredIssues || [])
+                    .filter(i => i.status === col.key)
+                    .map((issue, idx) => {
+                      const isAssignee = issue.assignee?.clerkUserId === currentUserClerkId;
+                      return (
+                        <Draggable
+                          key={issue.id}
+                          draggableId={issue.id}
+                          index={idx}
+                          isDragDisabled={updateIssuesLoading || !isAssignee}
+                        >
+                          {prov => (
+                            <div
+                              ref={prov.innerRef}
+                              {...prov.draggableProps}
+                              {...prov.dragHandleProps}
+                            >
+                              <IssueCard
+                                issue={issue}
+                                onDelete={() => fetchIssues(currentSprint.id)}
+                                onUpdate={updated =>
+                                  setIssues(list =>
+                                    list.map(i => i.id === updated.id ? updated : i)
+                                  )
+                                }
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+
+                  {provided.placeholder}
+
+                  {col.key === "TODO" && currentSprint.status !== "COMPLETED" && (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => handleAddIssue(col.key)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Issue
+                    </Button>
+                  )}
                 </div>
               )}
             </Droppable>

@@ -1,11 +1,16 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth  } from "@clerk/nextjs/server";
+import { is } from "date-fns/locale";
+import { useId } from "react";
+
+
+
 
 export async function getIssuesForSprint(sprintId) {
   const { userId, orgId } = auth();
-
+  console.log(userId, orgId, "User and Org ID in getIssuesForSprint");
   if (!userId || !orgId) {
     throw new Error("Unauthorized");
   }
@@ -59,6 +64,61 @@ export async function createIssue(projectId, data) {
   return issue;
 }
 
+// export async function updateIssueOrder(updatedIssues) {
+//   const { userId, orgId } = auth();
+
+//   if (!userId || !orgId) {
+//     throw new Error("Unauthorized");
+//   }
+
+//   const currentUser = await db.user.findUnique({
+//     where: { clerkUserId: userId },
+//   });
+//   if (!currentUser) throw new Error("User not found");
+
+
+//   // Start a transaction
+//   // await db.$transaction(async (prisma) => {
+//   //   // Update each issue
+//   //   for (const issue of updatedIssues) {
+//   //     await prisma.issue.update({
+//   //       where: { id: issue.id },
+//   //       data: {
+//   //         status: issue.status,
+//   //         order: issue.order,
+//   //       },
+//   //     });
+//   //   }
+//   // });
+
+//   await db.$transaction(async prisma => {
+//     for (const issue of updatedIssues) {
+//       const existing = await prisma.issue.findUnique({
+//         where: { id: issue.id },
+//         include: { assignee: true, project: true },
+//       });
+//       if (!existing) throw new Error(`Issue not found: ${issue.id}`);
+
+//       const isAssignee = existing.assigneeId === currentUser.id;
+//       console.log(isAssignee, "Is Assignee Check");
+//       console.log(existing, "Existing Issue Data");
+//       console.log(currentUser, "Current User Data");
+//       // const matchesOrg = existing.project.organizationId === orgId;
+//       // const isClerkAdmin = matchesOrg && (await isUserOrgAdmin(userId, orgId));
+
+//       if (!isAssignee) {
+//         throw new Error(`Unauthorized to move issue: ${issue.id}`);
+//       }
+
+//        await prisma.issue.update({
+//         where: { id: issue.id },
+//         data: { status: issue.status, order: issue.order },
+//       });
+//     }
+//   });
+
+//   return { success: true };
+// }
 export async function updateIssueOrder(updatedIssues) {
   const { userId, orgId } = auth();
 
@@ -66,16 +126,34 @@ export async function updateIssueOrder(updatedIssues) {
     throw new Error("Unauthorized");
   }
 
-  // Start a transaction
-  await db.$transaction(async (prisma) => {
-    // Update each issue
+  const currentUser = await db.user.findUnique({
+    where: { clerkUserId: userId },
+  });
+
+  if (!currentUser) throw new Error("User not found");
+  console.log(currentUser, "Current User Data in updateIssueOrder");
+
+  await db.$transaction(async prisma => {
     for (const issue of updatedIssues) {
+      const existing = await prisma.issue.findUnique({
+        where: { id: issue.id },
+        include: { assignee: true, reporter: true, project: true },
+      });
+
+      if (!existing) throw new Error(`Issue not found: ${issue.id}`);
+      console.log(existing, "Existing Issue Data");
+      const isAssignee = existing.assigneeId === currentUser.id;
+      const isReporter = existing.reporterId === currentUser.id;
+
+      console.log({ isAssignee, isReporter, issueId: issue.id });
+
+      if (!isAssignee && !isReporter) {
+        throw new Error(`Unauthorized to move issue: ${issue.id}`);
+      }
+
       await prisma.issue.update({
         where: { id: issue.id },
-        data: {
-          status: issue.status,
-          order: issue.order,
-        },
+        data: { status: issue.status, order: issue.order },
       });
     }
   });
